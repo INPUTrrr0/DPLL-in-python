@@ -1,46 +1,25 @@
-'''
+''
 Created on Oct. 5, 2021
 
 @author: theone
 '''
 import sys 
+from copy import deepcopy
 
 assign_true = set()
 assign_false = set()
 n_props, n_splits = 0, 0
 
+#------------------------------  
 
-
-input_cnf = open("test.txt", 'r').read()
-#literals = [i for i in list(set(input_cnf)) if i.isalpha()]
-cnf = input_cnf.splitlines() #list of all the rows 
-cnf=list(set(cnf))
-rows=[]
-
-totalLiterals=set()
-count=0
-for row in cnf:
-    r=row.split() # ["-1"," "," ", "13"]
-    r=[i for i in r if i] #get rid of the spaces  
-    if len(r)>0 and not r[0][0].isalpha(): #get rid of this row: ["c"," "," ", "quinn"]
-        rows.append(r)
-        for variable in r:
-            if variable[0].isdigit(): #"13"
-                totalLiterals.add(variable)
-                
-            else:
-                totalLiterals.add(variable[1:]) #if start with "-", add the remaining 
-
-
-
-def solve():
-    global rows
+def solve(rows,literals):
     global assign_true, assign_false, n_props, n_splits
     
     new_true = []
     new_false = []
-
     n_splits += 1
+    
+    rows = rows
     
     units=[] #[['1']] a unit clause with just 1 variable 
     for i in rows: #compare to: units=[i for i in rows if len(i)==1], only keep the content of each unit clause 
@@ -76,13 +55,7 @@ def solve():
                     i += 1
                     if i >= len(rows):
                         break
-                    
-        #rows=[i for i in rows if i] #dont do this!!!! We want to keep the empty clause!!!!!
-                    
-    #print("assign true")
-    #print(assign_true)
-    #print("assign false")
-    #print(assign_false)
+
     print('Units =', units)
     print('CNF after unit propogation = ', end = '')
     print(rows)
@@ -96,11 +69,71 @@ def solve():
         for i in new_false:
             assign_false.remove(i)
         print('Null clause found, backtracking...')
+        return False 
         
-    literals = [k for k in list(set(''.join(cnf))) if k.isalpha()]
+    literals=set()
+    for r in rows:
+        for variable in r:
+            if variable[0].isdigit(): #"13"
+                literals.add(variable)
+            else:
+                literals.add(variable[1:])
     
-    
-    
+    print("literals are:",literals)
+    x = list(literals)[0]
+    print("x is: ",x)
+    newrows=deepcopy(rows)
+    #print("new row is: ", newrows)
+    newrows.append([x])
+    print("new row is: ", newrows)
+    print("------------- call solve again ---------------")
+    #sys.exit()
+    if solve(newrows, deepcopy(literals)): #assign x is true by adding unit clause [x]
+        return True
+    elif solve(deepcopy(rows).append(['-'+x]), deepcopy(literals)):
+        return True
+    else:
+        for i in new_true:
+            assign_true.remove(i)
+        for i in new_false:
+            assign_false.remove(i)
+        return False
+ 
+   
+input_cnf = open("test.txt", 'r').read()
+cnf = input_cnf.splitlines() #list of all the rows 
+cnf=list(set(cnf))
+TotalRows=[]
+TotalLiterals=set()
+for row in cnf:
+    r=row.split() # ["-1"," "," ", "13"]
+    r=[i for i in r if i] #get rid of the spaces  
+    if len(r)>0 and not r[0][0].isalpha(): #get rid of this row: ["c"," "," ", "quinn"]
+        TotalRows.append(r)
+        for variable in r:
+            if variable[0].isdigit(): #"13"
+                TotalLiterals.add(variable)
+            else:
+                TotalLiterals.add(variable[1:]) #if start with "-", add the remaining 
+
 print("all cnf:")
-print(rows)    
-solve()
+print(TotalRows)
+print("all literals:")
+print(TotalLiterals) 
+
+if solve(TotalRows,TotalLiterals):
+    print('\nResult: SATISFIABLE')
+    print('\nNumber of Splits =', n_splits)
+    print('Unit Propogations =', n_props)
+    print('Solution:')
+    for i in assign_true:
+        print('\t\t'+i, '= True')
+    for i in assign_false:
+        print('\t\t'+i, '= False')
+else:
+    print("reached root")
+    print('\nResult: UNSATISFIABLE')
+    print('Number of Splits =', n_splits)
+    print('Unit Propogations =', n_props)
+    print()
+
